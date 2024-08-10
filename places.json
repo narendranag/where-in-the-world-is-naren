@@ -74,7 +74,7 @@
     { "name": "Bali, Indonesia", "coords": [-8.340539, 115.091950] },
     { "name": "Hong Kong, CN", "coords": [22.319303, 114.169361] },
     { "name": "Shenzhen, CN", "coords": [22.543097, 114.057868] },
-    { "name": "Guangzhou, CN", ""coords"": [23.129110, 113.264385] },
+    { "name": "Guangzhou, CN", "coords": [23.129110, 113.264385] },
     { "name": "Paris, France", "coords": [48.856614, 2.352222] },
     { "name": "Bordeaux, France", "coords": [44.837789, -0.579180] },
     { "name": "Montpellier, France", "coords": [43.611660, 3.876717] },
