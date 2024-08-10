@@ -37,7 +37,15 @@
 
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script>
-        var map = L.map('map').setView([20, 0], 2); // Centered on the world
+        // Initialize the map with a minimum zoom level to prevent zooming out too far
+        var map = L.map('map', {
+            minZoom: 2, // Set the minimum zoom level (adjust as needed)
+            maxBounds: [
+                [-90, -180], // Southwest coordinates (bottom-left)
+                [90, 180]    // Northeast coordinates (top-right)
+            ],
+            maxBoundsViscosity: 1.0 // Prevents dragging the map beyond the world bounds
+        }).setView([20, 0], 2); // Initial view centered on the world
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
