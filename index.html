@@ -73,7 +73,7 @@
                     currentLocation.bindPopup(`<b>Current Location: ${lastPlace.name}</b>`).openPopup();
 
                     // Optionally zoom in to the current location
-                    map.setView(lastPlace.coords, 10);
+                    // map.setView(lastPlace.coords, 10);
                 }
             })
             .catch(error => console.error('Error loading places:', error));
