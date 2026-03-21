@@ -5,79 +5,628 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Where in the world is Naren</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg-glass: rgba(15, 23, 42, 0.75);
+            --bg-glass-light: rgba(15, 23, 42, 0.55);
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --accent: #38bdf8;
+            --accent-warm: #f97316;
+            --radius: 16px;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
         body, html {
             margin: 0;
             padding: 0;
             height: 100%;
-            font-family: Arial, sans-serif;
+            font-family: 'Inter', Arial, sans-serif;
+            background: #0a0a0a;
+            overflow: hidden;
         }
+
         #map {
             height: 100vh;
             width: 100%;
         }
-        #title {
+
+        /* Header */
+        #header {
             position: absolute;
             top: 20px;
             left: 50%;
             transform: translateX(-50%);
-            background-color: rgba(0, 0, 0, 0.5);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-size: 2em;
-            font-weight: lighter;
+            background: var(--bg-glass);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius);
+            padding: 16px 32px;
             z-index: 1000;
+            box-shadow: var(--shadow);
+            text-align: center;
+            animation: fadeSlideDown 0.8s ease-out;
+            white-space: nowrap;
+        }
+
+        #title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: 0.02em;
+        }
+
+        #subtitle {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 300;
+            color: var(--text-secondary);
+            margin-top: 4px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        /* Stats Panel */
+        #stats-panel {
+            position: absolute;
+            bottom: 30px;
+            left: 20px;
+            z-index: 1000;
+            background: var(--bg-glass);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius);
+            padding: 16px 24px;
+            display: flex;
+            gap: 28px;
+            box-shadow: var(--shadow);
+            animation: fadeSlideUp 0.8s ease-out 0.3s both;
+        }
+
+        .stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--accent);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .stat-label {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            margin-top: 2px;
+            font-weight: 500;
+        }
+
+        /* Callouts Panel */
+        #callouts-panel {
+            position: absolute;
+            bottom: 30px;
+            right: 20px;
+            z-index: 1000;
+            background: var(--bg-glass);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            max-width: 250px;
+            box-shadow: var(--shadow);
+            animation: fadeSlideUp 0.8s ease-out 0.5s both;
+        }
+
+        .callout-title {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .callout-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 4px;
+            border-bottom: 1px solid var(--border-glass);
+            cursor: pointer;
+            transition: background 0.2s ease;
+            border-radius: 8px;
+        }
+
+        .callout-item:last-child {
+            border-bottom: none;
+        }
+
+        .callout-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .callout-icon {
+            font-size: 1.1rem;
+            flex-shrink: 0;
+            width: 28px;
+            text-align: center;
+        }
+
+        .callout-name {
+            font-size: 0.82rem;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .callout-desc {
+            font-size: 0.68rem;
+            color: var(--text-secondary);
+            margin-top: 1px;
+        }
+
+        /* Custom Markers */
+        .custom-marker {
+            width: 10px;
+            height: 10px;
+            background: var(--accent);
+            border-radius: 50%;
+            border: 2px solid rgba(56, 189, 248, 0.3);
+            box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .custom-marker:hover {
+            transform: scale(1.8);
+            box-shadow: 0 0 16px rgba(56, 189, 248, 0.7);
+        }
+
+        /* Cluster Markers */
+        .marker-cluster-custom {
+            background: var(--bg-glass);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 2px solid var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent);
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+
+        .marker-cluster-custom span {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Current Location Pulse */
+        .current-location-marker {
+            position: relative;
+        }
+
+        .pulse-dot {
+            width: 14px;
+            height: 14px;
+            background: var(--accent-warm);
+            border-radius: 50%;
+            border: 2.5px solid #fff;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2;
+            box-shadow: 0 0 12px rgba(249, 115, 22, 0.5);
+        }
+
+        .pulse-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 3px solid var(--accent-warm);
+            animation: pulse 2s ease-out infinite;
+            z-index: 1;
+        }
+
+        @keyframes pulse {
+            0% { width: 14px; height: 14px; opacity: 1; }
+            100% { width: 50px; height: 50px; opacity: 0; }
+        }
+
+        /* Leaflet Popup Override */
+        .leaflet-popup-content-wrapper {
+            background: var(--bg-glass) !important;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-glass);
+            border-radius: 12px !important;
+            box-shadow: var(--shadow) !important;
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+        }
+
+        .leaflet-popup-tip {
+            background: var(--bg-glass) !important;
+            border: 1px solid var(--border-glass);
+            box-shadow: none !important;
+        }
+
+        .leaflet-popup-content {
+            margin: 12px 16px !important;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .leaflet-popup-close-button {
+            color: var(--text-secondary) !important;
+            font-size: 1.1rem !important;
+        }
+
+        .leaflet-popup-close-button:hover {
+            color: var(--text-primary) !important;
+        }
+
+        .popup-callout {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            margin-top: 3px;
+            font-style: italic;
+        }
+
+        .popup-current {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.72rem;
+            color: var(--accent-warm);
+            margin-top: 4px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .popup-current-dot {
+            width: 7px;
+            height: 7px;
+            background: var(--accent-warm);
+            border-radius: 50%;
+            display: inline-block;
+            animation: pulse-small 1.5s ease-out infinite;
+        }
+
+        @keyframes pulse-small {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* Zoom Control */
+        .leaflet-control-zoom a {
+            background: var(--bg-glass) !important;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            color: var(--text-primary) !important;
+            border: 1px solid var(--border-glass) !important;
+            width: 34px !important;
+            height: 34px !important;
+            line-height: 34px !important;
+            font-size: 16px !important;
+            transition: background 0.2s ease;
+        }
+
+        .leaflet-control-zoom a:hover {
+            background: rgba(15, 23, 42, 0.9) !important;
+        }
+
+        .leaflet-control-zoom {
+            border: none !important;
+            box-shadow: var(--shadow) !important;
+            border-radius: 10px !important;
+            overflow: hidden;
+        }
+
+        /* Attribution */
+        .leaflet-control-attribution {
+            background: rgba(15, 23, 42, 0.65) !important;
+            color: var(--text-secondary) !important;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            font-size: 0.65rem !important;
+            border-radius: 6px 0 0 0;
+        }
+
+        .leaflet-control-attribution a {
+            color: var(--accent) !important;
+        }
+
+        /* Override MarkerCluster defaults */
+        .marker-cluster div {
+            background: transparent !important;
+        }
+
+        /* Animations */
+        @keyframes fadeSlideDown {
+            from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+
+        @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            #callouts-panel {
+                display: none;
+            }
+            #stats-panel {
+                left: 50%;
+                transform: translateX(-50%);
+                bottom: 20px;
+            }
+            #header {
+                padding: 12px 24px;
+            }
+            #title {
+                font-size: 1.25rem;
+            }
+            #subtitle {
+                font-size: 0.7rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            #stats-panel {
+                gap: 18px;
+                padding: 12px 16px;
+            }
+            .stat-number {
+                font-size: 1.2rem;
+            }
+            #header {
+                max-width: 90vw;
+                white-space: normal;
+                text-align: center;
+            }
         }
     </style>
 </head>
 <body>
     <div id="map"></div>
-    <div id="title">Where in the world is Naren</div>
+
+    <div id="header">
+        <div id="title">Where in the World is Naren</div>
+        <div id="subtitle">A personal travel map</div>
+    </div>
+
+    <div id="stats-panel">
+        <div class="stat">
+            <span class="stat-number" id="stat-places">0</span>
+            <span class="stat-label">Places</span>
+        </div>
+        <div class="stat">
+            <span class="stat-number" id="stat-countries">0</span>
+            <span class="stat-label">Countries</span>
+        </div>
+        <div class="stat">
+            <span class="stat-number" id="stat-continents">0</span>
+            <span class="stat-label">Continents</span>
+        </div>
+    </div>
+
+    <div id="callouts-panel">
+        <div class="callout-title">Notable Stops</div>
+        <div class="callout-item" data-lat="69.649205" data-lng="18.956308">
+            <span class="callout-icon">🧭</span>
+            <div>
+                <div class="callout-name">Tromsø, Norway</div>
+                <div class="callout-desc">Northernmost — 69.6°N</div>
+            </div>
+        </div>
+        <div class="callout-item" data-lat="-8.340539" data-lng="115.091950">
+            <span class="callout-icon">🌴</span>
+            <div>
+                <div class="callout-name">Bali, Indonesia</div>
+                <div class="callout-desc">Southernmost — 8.3°S</div>
+            </div>
+        </div>
+        <div class="callout-item" data-lat="35.676192" data-lng="139.650311">
+            <span class="callout-icon">🗼</span>
+            <div>
+                <div class="callout-name">Tokyo, Japan</div>
+                <div class="callout-desc">Easternmost — 139.6°E</div>
+            </div>
+        </div>
+        <div class="callout-item" data-lat="37.774929" data-lng="-122.419418">
+            <span class="callout-icon">🌉</span>
+            <div>
+                <div class="callout-name">San Francisco, US</div>
+                <div class="callout-desc">Westernmost — 122.4°W</div>
+            </div>
+        </div>
+    </div>
 
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
     <script>
-        // Initialize the map with a minimum zoom level to prevent zooming out too far
+        // Initialize the map
         var map = L.map('map', {
-            minZoom: 2, // Set the minimum zoom level (adjust as needed)
+            minZoom: 2,
+            zoomSnap: 0.5,
+            zoomControl: false,
             maxBounds: [
-                [-90, -180], // Southwest coordinates (bottom-left)
-                [90, 180]    // Northeast coordinates (top-right)
+                [-90, -180],
+                [90, 180]
             ],
-            maxBoundsViscosity: 1.0 // Prevents dragging the map beyond the world bounds
-        }).setView([20, 0], 2); // Initial view centered on the world
+            maxBoundsViscosity: 1.0
+        }).setView([25, 20], 2.5);
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
+        // Dark tile layer
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 19
         }).addTo(map);
 
-        // Fetch places from the external JSON file
+        // Add zoom control to bottom-right
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+        // Custom marker icon
+        var placeIcon = L.divIcon({
+            className: 'custom-marker',
+            iconSize: [10, 10],
+            iconAnchor: [5, 5],
+            popupAnchor: [0, -8]
+        });
+
+        // Current location icon
+        var currentIcon = L.divIcon({
+            className: 'current-location-marker',
+            iconSize: [20, 20],
+            iconAnchor: [10, 10],
+            popupAnchor: [0, -14],
+            html: '<div class="pulse-ring"></div><div class="pulse-dot"></div>'
+        });
+
+        // Continent mapping
+        var continentMap = {
+            'IN': 'Asia', 'UAE': 'Asia', 'Oman': 'Asia', 'SG': 'Asia', 'JP': 'Asia',
+            'CN': 'Asia', 'TH': 'Asia', 'Indonesia': 'Asia',
+            'US': 'North America', 'USA': 'North America', 'CA': 'North America',
+            'UK': 'Europe', 'France': 'Europe', 'Germany': 'Europe', 'Norway': 'Europe',
+            'Poland': 'Europe', 'Sweden': 'Europe', 'Netherlands': 'Europe'
+        };
+
+        // Count-up animation
+        function animateCount(element, target, duration) {
+            var start = 0;
+            var startTime = null;
+            function step(timestamp) {
+                if (!startTime) startTime = timestamp;
+                var progress = Math.min((timestamp - startTime) / duration, 1);
+                var eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+                element.textContent = Math.floor(eased * target);
+                if (progress < 1) {
+                    requestAnimationFrame(step);
+                } else {
+                    element.textContent = target;
+                }
+            }
+            requestAnimationFrame(step);
+        }
+
+        // Normalize country codes
+        function getCountry(name) {
+            var parts = name.split(', ');
+            var last = parts[parts.length - 1].trim();
+            // Handle multi-part US entries like "MA, US" or "Rhode Island, US"
+            if (last === 'US' || last === 'USA') return 'US';
+            if (parts.length >= 3) {
+                var secondLast = parts[parts.length - 2].trim();
+                if (last === 'US' || secondLast === 'MA' || secondLast === 'Rhode Island' || secondLast === 'Missouri') return 'US';
+            }
+            return last;
+        }
+
+        // Marker cluster group
+        var clusterGroup = L.markerClusterGroup({
+            maxClusterRadius: 40,
+            spiderfyOnMaxZoom: true,
+            showCoverageOnHover: false,
+            animate: true,
+            iconCreateFunction: function(cluster) {
+                var count = cluster.getChildCount();
+                return L.divIcon({
+                    html: '<span>' + count + '</span>',
+                    className: 'marker-cluster-custom',
+                    iconSize: [36, 36]
+                });
+            }
+        });
+
+        // Fetch and render places
         fetch('places.json')
-            .then(response => response.json())
-            .then(places => {
-                places.forEach(function(place) {
-                    var marker = L.marker(place.coords).addTo(map);
-                    marker.bindPopup(`<b>${place.name}</b>`);
-                    marker.on('click', function() {
-                        map.setView(place.coords, 10); // Zoom to the location when clicked
-                    });
+            .then(function(response) { return response.json(); })
+            .then(function(places) {
+                var countrySet = new Set();
+                var continentSet = new Set();
+
+                places.forEach(function(place, index) {
+                    var isLast = index === places.length - 1;
+
+                    // Compute stats
+                    var country = getCountry(place.name);
+                    countrySet.add(country);
+                    if (continentMap[country]) {
+                        continentSet.add(continentMap[country]);
+                    }
+
+                    if (isLast) {
+                        // Current location — add directly to map (not clustered)
+                        var currentMarker = L.marker(place.coords, { icon: currentIcon }).addTo(map);
+                        currentMarker.bindPopup(
+                            '<div><strong>' + place.name + '</strong>' +
+                            (place.callout ? '<div class="popup-callout">' + place.callout + '</div>' : '') +
+                            '<div class="popup-current"><span class="popup-current-dot"></span> Currently here</div></div>'
+                        ).openPopup();
+                    } else {
+                        // Regular marker — add to cluster group
+                        var marker = L.marker(place.coords, { icon: placeIcon });
+                        marker.bindPopup(
+                            '<div><strong>' + place.name + '</strong>' +
+                            (place.callout ? '<div class="popup-callout">' + place.callout + '</div>' : '') +
+                            '</div>'
+                        );
+                        marker.on('click', function() {
+                            map.flyTo(place.coords, 10, { duration: 1.2 });
+                        });
+                        clusterGroup.addLayer(marker);
+                    }
                 });
 
-                // Highlight the last place in the list as the current location
-                if (places.length > 0) {
-                    var lastPlace = places[places.length - 1];
-                    var currentLocation = L.circleMarker(lastPlace.coords, {
-                        color: 'red',
-                        radius: 10
-                    }).addTo(map);
-                    currentLocation.bindPopup(`<b>Current Location: ${lastPlace.name}</b>`).openPopup();
+                map.addLayer(clusterGroup);
 
-                    // Optionally zoom in to the current location
-                    // map.setView(lastPlace.coords, 10);
-                }
+                // Animate stats
+                animateCount(document.getElementById('stat-places'), places.length, 1500);
+                animateCount(document.getElementById('stat-countries'), countrySet.size, 1500);
+                animateCount(document.getElementById('stat-continents'), continentSet.size, 1500);
             })
-            .catch(error => console.error('Error loading places:', error));
+            .catch(function(error) {
+                console.error('Error loading places:', error);
+            });
 
+        // Callout click handlers
+        document.querySelectorAll('.callout-item').forEach(function(item) {
+            item.addEventListener('click', function() {
+                var lat = parseFloat(this.dataset.lat);
+                var lng = parseFloat(this.dataset.lng);
+                map.flyTo([lat, lng], 8, { duration: 1.5 });
+            });
+        });
     </script>
 </body>
 </html>
